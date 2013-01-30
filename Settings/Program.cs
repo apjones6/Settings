@@ -56,6 +56,10 @@ namespace Settings
                 Console.WriteLine("--------------------");
                 Console.WriteLine("END");
             }
+
+            // Demonstration of reflection base configuration; uncomment and breakpoint to inspect
+            // AppSettings.Configure();
+
             Console.ReadKey();
         }
     }

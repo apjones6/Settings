@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
+using System.Reflection;
 
 namespace Settings
 {
@@ -30,7 +31,7 @@ namespace Settings
 
         public static string String(string key, string @default = null)
         {
-            return Get(key, @default);
+            return Get(key, @default, false);
         }
 
         public static bool Bool(string key)
@@ -73,12 +74,18 @@ namespace Settings
 
         #region Configuration Methods
 
-        public static void Configure(Dictionary<string, string> defaults, List<string> required = null)
+        // Good for maintaining compile time settings, and yet ugly to call
+        public static void Configure(Dictionary<string, string> defaults, List<string> required = null, bool replace = false)
         {
-            // Adds new DEFAULTS and REQUIRED items, or overwrites existing DEFAULTS, but leaves existing ones intact
-            // Case sensitivity could be more robust, but not likely worth it
+            // Adds new DEFAULTS and REQUIRED items, or overwrites existing DEFAULTS
+            // Optionally replaces all items (clears first)
             if (defaults != null)
             {
+                if (replace)
+                {
+                    DEFAULTS.Clear();
+                }
+
                 foreach (var pair in defaults)
                 {
                     DEFAULTS[pair.Key] = pair.Value;
@@ -87,9 +94,54 @@ namespace Settings
 
             if (required != null)
             {
+                if (replace)
+                {
+                    REQUIRED.Clear();
+                }
+
                 foreach (var key in required)
                 {
                     REQUIRED.Add(key);
+                }
+            }
+        }
+
+        // This is probably very inefficient in a large application, and yet in many ways its almost the ideal solution
+        public static void Configure()
+        {
+            // Find AppSettingKeys types - We could use an attribute to select the classes, but we probably get better performance and
+            // definitely cleaner code if we simply require all keys defined in a class called 'AppSettingKeys'
+            var types = AppDomain.CurrentDomain.GetAssemblies()
+                .AsParallel()
+                .SelectMany(x => x.GetTypes())
+                .Where(x => x.IsAbstract && x.Name == "AppSettingKeys")
+                .ToArray();
+
+            // Clear DEFAULTS and REQUIRED so we can populate them again
+            DEFAULTS.Clear();
+            REQUIRED.Clear();
+
+            // Set keys from these types
+            foreach (var type in types)
+            {
+                var keys = type.GetFields(BindingFlags.Static | BindingFlags.Public)
+                    .Where(x => x.FieldType == typeof(string))
+                    .Select(x => new { Type = x, Attribute = x.GetCustomAttributes(typeof(AppSettingAttribute), false).FirstOrDefault() })
+                    .Where(x => x.Attribute != null)
+                    .Select(x => new { x.Type, Value = x.Type.GetRawConstantValue().ToString(), ((AppSettingAttribute)x.Attribute).Default, ((AppSettingAttribute)x.Attribute).Required })
+                    .ToArray();
+
+                foreach (var key in keys)
+                {
+                    if (key.Required)
+                    {
+                        REQUIRED.Add(key.Value);
+                    }
+
+                    if (key.Default != null)
+                    {
+                        DEFAULTS[key.Value] = key.Default;
+                    }
                 }
             }
         }
@@ -104,11 +156,11 @@ namespace Settings
 
         #region Private
 
-        private static string Get(string key, string @default = null)
+        private static string Get(string key, string @default = null, bool errorIfNull = true)
         {
             var value = ConfigurationManager.AppSettings[key];
 
-            // Throw if required and not set BEFORE? attempting to apply defaults
+            // Throw if required and not set BEFORE attempting to apply defaults
             if (value == null && REQUIRED.Contains(key))
             {
                 throw new ConfigurationErrorsException(string.Format("Required setting {0} was not found.", key));
@@ -124,6 +176,12 @@ namespace Settings
             if (value == null && DEFAULTS.ContainsKey(key))
             {
                 value = DEFAULTS[key];
+            }
+
+            // Throw if we can't let a null through (i.e. we're going to try and parse it)
+            if (value == null && errorIfNull)
+            {
+                throw new ConfigurationErrorsException(string.Format("Required setting {0} was not found.", key));
             }
 
             return value;
