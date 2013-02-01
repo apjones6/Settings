@@ -13,14 +13,14 @@ namespace Settings
         // These SHOULD be hard coded, as they are defaults for where no settings or explicit defaults are provided, but we may need a clean way of
         // dealing with default settings for numerous modules, built after the core library.
         // My solution would be to allow setting this dictionary through a static method, and set it on application start-up
-        private static readonly Dictionary<string, string> DEFAULTS = new Dictionary<string, string>
+        private static readonly Dictionary<string, string> defaults = new Dictionary<string, string>
             {
                 { AppSettingKeys.CULTURE_SWITCHING, "False" },
                 { AppSettingKeys.IMAGE_TYPES, ".jpg;.jpeg;.png;.gif" },
                 { AppSettingKeys.PAGE_SIZE, "10" }
             };
 
-        private static readonly HashSet<string> REQUIRED = new HashSet<string>
+        private static readonly HashSet<string> required = new HashSet<string>
             {
                 AppSettingKeys.IMAGE_PATH
             };
@@ -29,9 +29,9 @@ namespace Settings
 
         #region Retrieval Methods
 
-        public static string String(string key, string @default = null)
+        public static string String(string key)
         {
-            return Get(key, @default, false);
+            return Get(key, false);
         }
 
         public static bool Bool(string key)
@@ -39,19 +39,9 @@ namespace Settings
             return bool.Parse(Get(key));
         }
 
-        public static bool Bool(string key, bool @default)
-        {
-            return bool.Parse(Get(key, @default.ToString()));
-        }
-
         public static int Int(string key)
         {
             return int.Parse(Get(key));
-        }
-
-        public static int Int(string key, int @default)
-        {
-            return int.Parse(Get(key, @default.ToString()));
         }
 
         public static Guid Guid(string key)
@@ -59,12 +49,6 @@ namespace Settings
             return System.Guid.Parse(Get(key));
         }
 
-        public static Guid Guid(string key, Guid @default)
-        {
-            return System.Guid.Parse(Get(key, @default.ToString()));
-        }
-
-        // I really hate this name, and want a much shorter one if we can think of it. Also note no @default version; not useful
         public static FileExtensionSet FileExtensions(string key)
         {
             return new FileExtensionSet(Get(key));
@@ -77,18 +61,18 @@ namespace Settings
         // Good for maintaining compile time settings, and yet ugly to call
         public static void Configure(Dictionary<string, string> defaults, List<string> required = null, bool replace = false)
         {
-            // Adds new DEFAULTS and REQUIRED items, or overwrites existing DEFAULTS
+            // Adds new defaults and required items, or overwrites existing defaults
             // Optionally replaces all items (clears first)
             if (defaults != null)
             {
                 if (replace)
                 {
-                    DEFAULTS.Clear();
+                    defaults.Clear();
                 }
 
                 foreach (var pair in defaults)
                 {
-                    DEFAULTS[pair.Key] = pair.Value;
+                    defaults[pair.Key] = pair.Value;
                 }
             }
 
@@ -96,12 +80,12 @@ namespace Settings
             {
                 if (replace)
                 {
-                    REQUIRED.Clear();
+                    required.Clear();
                 }
 
                 foreach (var key in required)
                 {
-                    REQUIRED.Add(key);
+                    required.Add(key);
                 }
             }
         }
@@ -117,9 +101,9 @@ namespace Settings
                 .Where(x => x.IsAbstract && x.Name == "AppSettingKeys")
                 .ToArray();
 
-            // Clear DEFAULTS and REQUIRED so we can populate them again
-            DEFAULTS.Clear();
-            REQUIRED.Clear();
+            // Clear defaults and required so we can populate them again
+            defaults.Clear();
+            required.Clear();
 
             // Set keys from these types
             foreach (var type in types)
@@ -135,12 +119,12 @@ namespace Settings
                 {
                     if (key.Required)
                     {
-                        REQUIRED.Add(key.Value);
+                        required.Add(key.Value);
                     }
 
                     if (key.Default != null)
                     {
-                        DEFAULTS[key.Value] = key.Default;
+                        defaults[key.Value] = key.Default;
                     }
                 }
             }
@@ -149,39 +133,33 @@ namespace Settings
         // Can call this from Global.asax or an administration URL to ensure app settings set
         public static string[] NotFound()
         {
-            return REQUIRED.Where(key => ConfigurationManager.AppSettings[key] == null).ToArray();
+            return required.Where(key => ConfigurationManager.AppSettings[key] == null).ToArray();
         }
 
         #endregion
 
         #region Private
 
-        private static string Get(string key, string @default = null, bool errorIfNull = true)
+        private static string Get(string key, bool errorIfNull = true)
         {
             var value = ConfigurationManager.AppSettings[key];
 
             // Throw if required and not set BEFORE attempting to apply defaults
-            if (value == null && REQUIRED.Contains(key))
+            if (value == null && required.Contains(key))
             {
-                throw new ConfigurationErrorsException(string.Format("Required setting {0} was not found.", key));
-            }
-
-            // Set explicit default if not set
-            if (value == null && @default != null)
-            {
-                value = @default;
+                throw new ConfigurationErrorsException(string.Format("required setting {0} was not found.", key));
             }
 
             // Set global default if not set
-            if (value == null && DEFAULTS.ContainsKey(key))
+            if (value == null && defaults.ContainsKey(key))
             {
-                value = DEFAULTS[key];
+                value = defaults[key];
             }
 
             // Throw if we can't let a null through (i.e. we're going to try and parse it)
             if (value == null && errorIfNull)
             {
-                throw new ConfigurationErrorsException(string.Format("Required setting {0} was not found.", key));
+                throw new ConfigurationErrorsException(string.Format("required setting {0} was not found.", key));
             }
 
             return value;

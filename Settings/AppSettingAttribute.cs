@@ -14,6 +14,16 @@ namespace Settings
             this.Default = @default;
         }
 
+        public AppSettingAttribute(int @default)
+            : this(@default.ToString())
+        {
+        }
+
+        public AppSettingAttribute(bool @default)
+            : this(@default.ToString())
+        {
+        }
+
         public string Default { get; set; }
 
         public bool Required { get; set; }
