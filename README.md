@@ -71,7 +71,7 @@ Configuration by Reflection:
         [Default(".jpg;.jpeg")]
         [Required]
         public const string IMAGE_TYPES = "IMAGE_TYPES";
-     }
+    }
     
     // Called on startup, such as in Global.asax
     AppSettings.ConfigureByReflection();
