@@ -57,7 +57,7 @@ namespace Settings
                 Console.WriteLine("Reflection Configuration");
             }
 
-            AppSettings.Configure();
+            AppSettings.ConfigureByReflection();
             ConfigurationManager.AppSettings[AppSettingKeys.CULTURE_SWITCHING] = null;
             ConfigurationManager.AppSettings[AppSettingKeys.IMAGE_TYPES] = null;
             ConfigurationManager.AppSettings[AppSettingKeys.PAGE_SIZE] = null;

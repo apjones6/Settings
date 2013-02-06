@@ -45,8 +45,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppSettingKeys.cs" />
+    <Compile Include="AppSettingKeysAttribute.cs" />
     <Compile Include="AppSettings.cs" />
-    <Compile Include="AppSettingAttribute.cs" />
+    <Compile Include="RequiredAttribute.cs" />
+    <Compile Include="DefaultAttribute.cs" />
+    <Compile Include="ExtraKeys.cs" />
     <Compile Include="FileExtensionSet.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

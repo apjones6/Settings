@@ -10,9 +10,8 @@ namespace Settings
     {
         #region Fields
 
-        // These SHOULD be hard coded, as they are defaults for where no settings or explicit defaults are provided, but we may need a clean way of
-        // dealing with default settings for numerous modules, built after the core library.
-        // My solution would be to allow setting this dictionary through a static method, and set it on application start-up
+        // These SHOULD be hard coded or empty, as they are defaults for where no settings are provided.
+        // See the two Configure methods for setting this up.
         private static readonly Dictionary<string, string> defaults = new Dictionary<string, string>
             {
                 { AppSettingKeys.CULTURE_SWITCHING, "False" },
@@ -58,8 +57,8 @@ namespace Settings
 
         #region Configuration Methods
 
-        // Good for maintaining compile time settings, and yet ugly to call
-        public static void Configure(Dictionary<string, string> defaults, List<string> required = null, bool replace = false)
+        // Efficient and simple, but ugly to call
+        public static void ConfigureByParameters(Dictionary<string, string> defaults, List<string> required = null, bool replace = false)
         {
             // Adds new defaults and required items, or overwrites existing defaults
             // Optionally replaces all items (clears first)
@@ -90,15 +89,16 @@ namespace Settings
             }
         }
 
-        // This is probably very inefficient in a large application, and yet in many ways its almost the ideal solution
-        public static void Configure()
+        // You only want to call this overload once on site startup, as it's quite heavy, but it nicely deals with component based applications
+        public static void ConfigureByReflection()
         {
-            // Find AppSettingKeys types - We could use an attribute to select the classes, but we probably get better performance and
-            // definitely cleaner code if we simply require all keys defined in a class called 'AppSettingKeys'
+            // Find AppSettingKeys types - We use an attribute to select the classes, but we probably get better performance and
+            // definitely cleaner code if we simply require all keys defined in a class called 'AppSettingKeys'. This however might
+            // limit our future usage, and it's not a particularly easy thing to make clear to clients.
             var types = AppDomain.CurrentDomain.GetAssemblies()
                 .AsParallel()
                 .SelectMany(x => x.GetTypes())
-                .Where(x => x.IsAbstract && x.Name == "AppSettingKeys")
+                .Where(x => x.IsAbstract && x.GetCustomAttributes(typeof(AppSettingKeysAttribute), true).Any())
                 .ToArray();
 
             // Clear defaults and required so we can populate them again
@@ -110,9 +110,20 @@ namespace Settings
             {
                 var keys = type.GetFields(BindingFlags.Static | BindingFlags.Public)
                     .Where(x => x.FieldType == typeof(string))
-                    .Select(x => new { Type = x, Attribute = x.GetCustomAttributes(typeof(AppSettingAttribute), false).FirstOrDefault() })
-                    .Where(x => x.Attribute != null)
-                    .Select(x => new { x.Type, Value = x.Type.GetRawConstantValue().ToString(), ((AppSettingAttribute)x.Attribute).Default, ((AppSettingAttribute)x.Attribute).Required })
+                    .Select(x => new
+                        {
+                            Type = x,
+                            Default = x.GetCustomAttributes(typeof(DefaultAttribute), false).SingleOrDefault(),
+                            Required = x.GetCustomAttributes(typeof(RequiredAttribute), false).Any()
+                        })
+                    .Where(x => x.Default != null || x.Required)
+                    .Select(x => new
+                        {
+                            x.Type,
+                            Value = x.Type.GetRawConstantValue().ToString(),
+                            Default = x.Default as DefaultAttribute,
+                            x.Required
+                        })
                     .ToArray();
 
                 foreach (var key in keys)
@@ -124,13 +135,14 @@ namespace Settings
 
                     if (key.Default != null)
                     {
-                        defaults[key.Value] = key.Default;
+                        defaults[key.Value] = key.Default.Value;
                     }
                 }
             }
         }
 
-        // Can call this from Global.asax or an administration URL to ensure app settings set
+        // Can call this from startup, after calling Configure, to ensure all your required settings are available.
+        // Then you can safely abort startup with a clean error.
         public static string[] NotFound()
         {
             return required.Where(key => ConfigurationManager.AppSettings[key] == null).ToArray();
