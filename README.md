@@ -17,19 +17,23 @@ Day to day usage
 Most of the time we use app settings to store string paths, boolean flags, GUID ids and integer 
 values. These scenarios are simple:
 
+```C#
     string path = AppSettings.String(Keys.EXAMPLE_PATH);
     bool flag = AppSettings.Bool(Keys.EXAMPLE_FLAG);
     int count = AppSettings.Int(Keys.EXAMPLE_COUNT);
-	Guid id = AppSettings.Guid(Keys.EXAMPLE_ID);
+    Guid id = AppSettings.Guid(Keys.EXAMPLE_ID);
+```
 
 The final example which we use quite often is to store white/black lists of file extensions. This 
 is specially handled by AppSettings for convenience of use and robustness:
 
+```C#
     string extension = Path.GetExtension("example file.jpg");
-	if (AppSettings.FileExtensions(Keys.EXAMPLE_FILE_TYPES).Contains(extension))
-	{
-	    // Do something...
-	}
+    if (AppSettings.FileExtensions(Keys.EXAMPLE_FILE_TYPES).Contains(extension))
+    {
+        // Do something...
+    }
+```
 
 The AppSettings class has a knowledge of settings which are required, and default values for 
 certain keys. If a setting is not in the settings but has been marked as required, a 
@@ -49,33 +53,39 @@ knowledge of all the settings. The second is more suited to a large modular appl
 
 Configuration by Parameters:
 
-	// Called on startup, such as in Global.asax
+```C#
+    // Called on startup, such as in Global.asax
     var defaults = new Dictionary<string, string> { { "default-key", "default-value" } };
-	var required = new List<string> { "required-key" };
+    var required = new List<string> { "required-key" };
     AppSettings.ConfigureByParameters(defaults, required);
+```
 
 Configuration by Reflection:
 
-	// This class could be anywhere, including another DLL, as long as it's part of the final 
-	// executing applications BIN
+```C#
+    // This class could be anywhere, including another DLL, as long as it's part of the final 
+    // executing applications BIN
     [AppSettingKeys]
     public static class ExampleKeys
     {
         [Default(".jpg;.jpeg")]
-		[Required]
+        [Required]
         public const string IMAGE_TYPES = "IMAGE_TYPES";
-	}
-	
-	// Called on startup, such as in Global.asax
-	AppSettings.ConfigureByReflection();
+     }
+    
+    // Called on startup, such as in Global.asax
+    AppSettings.ConfigureByReflection();
+```
 
 Another useful method returns any keys which have been configured as required, but are not in the 
 settings file. This allows early detection of configuration errors.
 
+```C#
     AppSettings.ConfigureByReflection();
-	var missing = AppSettings.NotFound();
-	if (missing.Any())
-	{
-		var message = string.Concat("Required settings not found: ", string.Join(", ", missing));
-		throw new ApplicationException(message);
-	}
+    var missing = AppSettings.NotFound();
+    if (missing.Any())
+    {
+        var message = string.Concat("Required settings not found: ", string.Join(", ", missing));
+        throw new ApplicationException(message);
+    }
+```
