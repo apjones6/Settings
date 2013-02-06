@@ -47,7 +47,7 @@ namespace Settings
                 Console.WriteLine("File Extensions");
             }
             Console.WriteLine("Contains JPG: {0}", AppSettings.FileExtensions(AppSettingKeys.IMAGE_TYPES).Contains("Jpg"));
-            Console.WriteLine("Contains PNG: {0}", AppSettings.FileExtensions(AppSettingKeys.IMAGE_TYPES).Contains("image.png"));
+            Console.WriteLine("Contains PNG: {0}", AppSettings.FileExtensions(AppSettingKeys.IMAGE_TYPES).Contains(".png"));
             Console.WriteLine("Contains BMP: {0}", AppSettings.FileExtensions(AppSettingKeys.IMAGE_TYPES).Contains(".BMP"));
 
             // Reflection based configuration
