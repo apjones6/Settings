@@ -120,6 +120,5 @@ Then just remember to clean up after yourself in TearDown, to ensure tests don't
     public void TearDown()
     {
         AppSettings.Defaults.Clear();
-        AppSettings.Required.Clear();
     }
 ```
