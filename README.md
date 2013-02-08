@@ -36,28 +36,25 @@ is specially handled by AppSettings for convenience of use and robustness:
 ```
 
 The AppSettings class has a knowledge of settings which are required, and default values for 
-certain keys. If a setting is not in the settings but has been marked as required, a 
+certain keys. If a setting is not in the configuration but has been marked as required, a 
 ConfigurationErrorsException is automatically thrown when it is requested. If a setting is not 
 required, but no value is in the settings then a dictionary of default values is checked. If found 
-this value is used, otherwise either null is returned, or a ConfigurationErrorsException is thrown 
-as null is not reasonable (such as a Guid).
-
-NOTE: We could potentially modify this to interpret it as false/0/Guid.Empty/no file extensions.
+this value is used, otherwise the default value for the type is returned, except for FileExtensions
+which returns an empty set.
 
 Initialization
 --------------
 
-There are two ways to configure the AppSettings known default values and required keys; by 
-parameter and by reflection. The first is simpler and more efficient, but requires up front 
-knowledge of all the settings. The second is more suited to a large modular application.
+There are two ways to configure the AppSettings known default values and required keys; explicitly 
+and by reflection. The first is simpler and more efficient, but requires up front knowledge of all 
+the settings. The second is more suited to a large modular application.
 
-Configuration by Parameters:
+Configuration Explicitly:
 
 ```C#
     // Called on startup, such as in Global.asax
-    var defaults = new Dictionary<string, string> { { "default-key", "default-value" } };
-    var required = new List<string> { "required-key" };
-    AppSettings.ConfigureByParameters(defaults, required);
+    AppSettings.Defaults["default-key"] = "default-value";
+    AppSettings.Required.Add("required-key");
 ```
 
 Configuration by Reflection:
@@ -82,10 +79,47 @@ settings file. This allows early detection of configuration errors.
 
 ```C#
     AppSettings.ConfigureByReflection();
-    var missing = AppSettings.NotFound();
-    if (missing.Any())
+    var notFound = AppSettings.NotFound();
+    if (notFound.Any())
     {
         var message = string.Concat("Required settings not found: ", string.Join(", ", missing));
-        throw new ApplicationException(message);
+        throw new ConfigurationErrorsException(message);
+    }
+```
+
+There's even a method built in which does this exception throwing for you, for convenience.
+
+```C#
+    AppSettings.ConfigureByReflection();
+    AppSettings.Verify();
+```
+
+Testing With AppSettings
+------------------------
+
+Unit testing code which calls the AppSettings retrieval methods relies on a pass through approach.
+This is so the code can remain so much simpler than if we had to introduce layers of indirection 
+(interfaces) just to support testing dependent code.
+
+In your SetUp or directly in your Tests set the defaults you expect. As there shouldn't be actual 
+app settings for a test, these values will be returned.
+
+```C#
+    [SetUp]
+    public void SetUp()
+    {
+        AppSettings.Defaults[Keys.ROOT_PATH] = "TestData/Root";
+        AppSettings.Defaults[Keys.PAGE_SIZE] = "10";
+    }
+```
+
+Then just remember to clean up after yourself in TearDown, to ensure tests don't affect eachother.
+
+```C#
+    [TearDown]
+    public void TearDown()
+    {
+        AppSettings.Defaults.Clear();
+        AppSettings.Required.Clear();
     }
 ```

@@ -5,7 +5,7 @@
     {
         [Default(".jpg;.jpeg")]
         public const string IMAGE_TYPES = "IMAGE_TYPES";
-        [Default(false)]
+        [Default(true)]
         public const string CULTURE_SWITCHING = "CULTURE_SWITCHING";
         [Required]
         public const string IMAGE_PATH = "IMAGE_PATH";

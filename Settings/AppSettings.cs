@@ -8,86 +8,56 @@ namespace Settings
 {
     public static class AppSettings
     {
-        #region Fields
+        #region Properties
 
-        // These SHOULD be hard coded or empty, as they are defaults for where no settings are provided.
-        // See the two Configure methods for setting this up.
-        private static readonly Dictionary<string, string> defaults = new Dictionary<string, string>
-            {
-                { AppSettingKeys.CULTURE_SWITCHING, "False" },
-                { AppSettingKeys.IMAGE_TYPES, ".jpg;.jpeg;.png;.gif" },
-                { AppSettingKeys.PAGE_SIZE, "10" }
-            };
+        private static readonly Dictionary<string, string> defaults = new Dictionary<string, string>();
+        public static Dictionary<string, string> Defaults
+        {
+            get { return defaults; }
+        }
 
-        private static readonly HashSet<string> required = new HashSet<string>
-            {
-                AppSettingKeys.IMAGE_PATH
-            };
+        private static readonly HashSet<string> required = new HashSet<string>();
+        public static HashSet<string> Required
+        {
+            get { return required; }
+        }
 
         #endregion
 
-        #region Retrieval Methods
+        #region Retrieval
 
         public static string String(string key)
         {
-            return Get(key, false);
+            return Get(key);
         }
 
         public static bool Bool(string key)
         {
-            return bool.Parse(Get(key));
+            var value = Get(key);
+            return value != null ? bool.Parse(value) : default(bool);
         }
 
         public static int Int(string key)
         {
-            return int.Parse(Get(key));
+            var value = Get(key);
+            return value != null ? int.Parse(value) : default(int);
         }
 
         public static Guid Guid(string key)
         {
-            return System.Guid.Parse(Get(key));
+            var value = Get(key);
+            return value != null ? System.Guid.Parse(value) : default(Guid);
         }
 
         public static FileExtensionSet FileExtensions(string key)
         {
-            return new FileExtensionSet(Get(key));
+            var value = Get(key);
+            return value != null ? new FileExtensionSet(value) : new FileExtensionSet();
         }
 
         #endregion
 
-        #region Configuration Methods
-
-        // Efficient and simple, but ugly to call
-        public static void ConfigureByParameters(Dictionary<string, string> defaults, List<string> required = null, bool replace = false)
-        {
-            // Adds new defaults and required items, or overwrites existing defaults
-            // Optionally replaces all items (clears first)
-            if (defaults != null)
-            {
-                if (replace)
-                {
-                    defaults.Clear();
-                }
-
-                foreach (var pair in defaults)
-                {
-                    defaults[pair.Key] = pair.Value;
-                }
-            }
-
-            if (required != null)
-            {
-                if (replace)
-                {
-                    required.Clear();
-                }
-
-                foreach (var key in required)
-                {
-                    required.Add(key);
-                }
-            }
-        }
+        #region Configuration
 
         // You only want to call this overload once on site startup, as it's quite heavy, but it nicely deals with component based applications
         public static void ConfigureByReflection()
@@ -141,18 +111,27 @@ namespace Settings
             }
         }
 
-        // Can call this from startup, after calling Configure, to ensure all your required settings are available.
-        // Then you can safely abort startup with a clean error.
         public static string[] NotFound()
         {
             return required.Where(key => ConfigurationManager.AppSettings[key] == null).ToArray();
+        }
+
+        // Can call this from startup, after calling Configure, to ensure all your required settings are available.
+        public static void Verify()
+        {
+            var notFound = NotFound();
+            if (notFound.Any())
+            {
+                var message = string.Concat("Required settings not found: ", string.Join(", ", notFound));
+                throw new ConfigurationErrorsException(message);
+            }
         }
 
         #endregion
 
         #region Private
 
-        private static string Get(string key, bool errorIfNull = true)
+        private static string Get(string key)
         {
             var value = ConfigurationManager.AppSettings[key];
 
@@ -166,12 +145,6 @@ namespace Settings
             if (value == null && defaults.ContainsKey(key))
             {
                 value = defaults[key];
-            }
-
-            // Throw if we can't let a null through (i.e. we're going to try and parse it)
-            if (value == null && errorIfNull)
-            {
-                throw new ConfigurationErrorsException(string.Format("required setting {0} was not found.", key));
             }
 
             return value;

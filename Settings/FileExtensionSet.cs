@@ -9,6 +9,10 @@ namespace Settings
     // But I really hate this name, and want a much shorter one if we can think of it.
     public class FileExtensionSet : HashSet<FileExtension>
     {
+        public FileExtensionSet()
+        {
+        }
+
         public FileExtensionSet(string settings)
             : this(settings, new[] { ';' })
         {
