@@ -75,10 +75,9 @@ namespace Settings
             defaults.Clear();
             required.Clear();
 
-            // Set keys from these types
-            foreach (var type in types)
-            {
-                var keys = type.GetFields(BindingFlags.Static | BindingFlags.Public)
+            // Get keys from these types
+            var keys = types.SelectMany(t =>
+                t.GetFields(BindingFlags.Static | BindingFlags.Public)
                     .Where(x => x.FieldType == typeof(string))
                     .Select(x => new
                         {
@@ -89,24 +88,35 @@ namespace Settings
                     .Where(x => x.Default != null || x.Required)
                     .Select(x => new
                         {
-                            x.Type,
                             Value = x.Type.GetRawConstantValue().ToString(),
                             Default = x.Default as DefaultAttribute,
                             x.Required
-                        })
-                    .ToArray();
+                        }))
+                .ToArray();
 
-                foreach (var key in keys)
+            // Check for conflicts
+            var conflicts = keys.GroupBy(x => x.Value)
+                .Where(x => x.Count() > 1)
+                .Where(x => x.GroupBy(y => new { Default = y.Default != null ? y.Default.Value : null, y.Required }).Count() > 1)
+                .Select(x => x.FirstOrDefault().Value)
+                .ToArray();
+            if (conflicts.Any())
+            {
+                var message = string.Concat("Found conflicts for keys: ", string.Join(", ", conflicts));
+                throw new ConfigurationErrorsException(message);
+            }
+
+            // Add the keys to dictionary
+            foreach (var key in keys)
+            {
+                if (key.Required)
                 {
-                    if (key.Required)
-                    {
-                        required.Add(key.Value);
-                    }
+                    required.Add(key.Value);
+                }
 
-                    if (key.Default != null)
-                    {
-                        defaults[key.Value] = key.Default.Value;
-                    }
+                if (key.Default != null)
+                {
+                    defaults[key.Value] = key.Default.Value;
                 }
             }
         }
