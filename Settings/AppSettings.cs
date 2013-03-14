@@ -144,10 +144,6 @@ namespace Settings
                 .Where(x => x.IsAbstract && x.GetCustomAttributes(typeof(AppSettingKeysAttribute), true).Any())
                 .ToArray();
 
-            // Clear defaults and required so we can populate them again
-            defaults.Clear();
-            required.Clear();
-
             // Get keys from these types
             var keys = types.SelectMany(t =>
                 t.GetFields(BindingFlags.Static | BindingFlags.Public)
@@ -179,7 +175,9 @@ namespace Settings
                 throw new ConfigurationErrorsException(message);
             }
 
-            // Add the keys to dictionary
+            // Populate without risk of unintended consequences
+            defaults.Clear();
+            required.Clear();
             foreach (var key in keys)
             {
                 if (key.Required)
