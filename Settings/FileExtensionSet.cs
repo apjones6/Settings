@@ -4,83 +4,74 @@ using System.Linq;
 
 namespace Settings
 {
-    // The motivation for this class and the FileExtension class is to make it work like a SET, and handle things like Contains(string) robustly against
-    // case insensitivity. The only real issue is the difficulty in creating (such as for default) but I don't see that happening often, if ever.
-    // But I really hate this name, and want a much shorter one if we can think of it.
-    public class FileExtensionSet : HashSet<FileExtension>
+    /// <summary>
+    /// A HashSet{T} of FileExtensions, allowing simple checking of the existence of a provided file
+    /// extension within the container, as well as enhancements for using string extensions directly
+    /// in a robust manner.
+    /// </summary>
+    /// <remarks>
+    /// The motivation for this class and the FileExtension class is to make it work like a SET, and 
+    /// handle things like Contains(string) robustly against case insensitivity. The only real issue 
+    /// is the difficulty in creating (such as for default) but I don't see that happening often, if 
+    /// ever. I think this could be better named however.
+    /// </remarks>
+    public sealed class FileExtensionSet : HashSet<FileExtension>
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FileExtensionSet"/> class.
+        /// </summary>
         public FileExtensionSet()
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FileExtensionSet"/> class from the provided
+        /// string settings.
+        /// </summary>
+        /// <param name="settings">The string settings to decode.</param>
         public FileExtensionSet(string settings)
-            : this(settings, new[] { ';' })
+            : this(settings, ';')
         {
         }
 
-        public FileExtensionSet(string settings, char[] separators)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FileExtensionSet"/> class from the provided
+        /// string settings.
+        /// </summary>
+        /// <param name="settings">The string settings to decode.</param>
+        /// <param name="separators">An array of separator characters.</param>
+        public FileExtensionSet(string settings, params char[] separators)
             : this(settings.Split(separators, StringSplitOptions.RemoveEmptyEntries))
         {
         }
 
-        public FileExtensionSet(IEnumerable<string> extensions)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FileExtensionSet"/> class from the provided
+        /// extensions array.
+        /// </summary>
+        /// <param name="extensions">An array of string extensions.</param>
+        public FileExtensionSet(params string[] extensions)
             : base(extensions.Select(extension => new FileExtension(extension)))
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FileExtensionSet"/> class from the provided
+        /// extensions enumerable.
+        /// </summary>
+        /// <param name="extensions">An enumerable of FileExtensions.</param>
         public FileExtensionSet(IEnumerable<FileExtension> extensions)
             : base(extensions)
         {
         }
 
-        // Entire justification for inheriting HashSet<FileExtension>, as we can't override this if we used HashSet<string> and we'd like to inherit
-        // the ISet<> interface as easily as we reasonably can. Alternatively, we could do the heavy lifting so we could avoid creating the
-        // FileExtension class.
-        public bool Contains(string item)
-        {
-            return Contains(new FileExtension(item));
-        }
-
+        /// <summary>
+        /// Returns a string representation of this FileExtensionSet instance.
+        /// </summary>
+        /// <returns>A string representation.</returns>
         public override string ToString()
         {
             return string.Join(";", this);
-        }
-    }
-
-    public sealed class FileExtension
-    {
-        private readonly string extension;
-
-        public FileExtension(string extension)
-        {
-            if (string.IsNullOrWhiteSpace(extension))
-            {
-                throw new ArgumentNullException("extension");
-            }
-
-            this.extension = "." + extension.Trim().TrimStart('.').ToLower();
-        }
-
-        public override bool Equals(object obj)
-        {
-            var p = obj as FileExtension;
-            if (p == null)
-            {
-                return false;
-            }
-
-            // Constructor ensures this is formatted similarly and lowercase
-            return p.extension == extension;
-        }
-
-        public override int GetHashCode()
-        {
-            return extension.GetHashCode();
-        }
-
-        public override string ToString()
-        {
-            return extension;
         }
     }
 }

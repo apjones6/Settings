@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Configuration;
+using Settings;
 
-namespace Settings
+namespace Examples
 {
     class Program
     {

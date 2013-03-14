@@ -1,4 +1,6 @@
-﻿namespace Settings
+﻿using Settings;
+
+namespace Examples
 {
     [AppSettingKeys]
     public static class ExtraKeys
